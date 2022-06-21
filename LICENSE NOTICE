@@ -1,0 +1,15 @@
+This project is largely based on the book Physically Based Rendering: From Theory to Implementation. 
+The code in this book is originally licensed under Apache License 2.0. This license states that any changes must be stated, 
+and that this notice is included. The work done here will be licenced under Mozilla Public License Version 2.0, as allowed by the original license (Apache License 2.0).
+
+As to stating changes from the original source:
+This isn't as much a copy and edit of the original, as it is a rewrite with the original as reference.
+Therefore pretty much everything will differ anywhere from slightly to greatly from the original source code.
+The original source can be found on github under the user Matt Pharr:
+https://github.com/mmp
+And the code specifically referenced for this work can be found here:
+https://github.com/mmp/pbrt-v4
+
+I've chosen to specify pbrt-v4 which has a more restrictive license than pbrt-v3, because I might want to use or reference code in the newer version.
+Realistically, most code will be referenced from pbrt-v3:
+https://github.com/mmp/pbrt-v3
