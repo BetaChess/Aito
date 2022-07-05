@@ -3,9 +3,9 @@ project (aito)
 
 set(SOURCES
 	"main.cpp"
-    "geometry.h" 
-    "geometry.cpp"
-)
+    "vecmath.h" 
+    "vecmath.cpp"
+ "aito.h")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
