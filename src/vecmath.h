@@ -1,5 +1,5 @@
-#ifndef GEOMETRY_H
-#define GEOMETRY_H
+#ifndef VECMATH_H
+#define VECMATH_H
 
 #include "aito.h"
 
@@ -10,10 +10,21 @@
 namespace aito
 {
 
+template <typename T>
+inline bool is_NaN(const T x)
+{
+	return std::isnan(x);
+}
+template <>
+inline bool is_NaN(const int x)
+{
+	return false;
+}
+
 ///////////////////////////////////////////////// Vectors
 
 template<typename T>
-struct Vec2
+class Vec2
 {
 public:
 	T x = 0, y = 0;
@@ -30,7 +41,7 @@ public:
 
 	[[nodiscard]] constexpr bool has_NaNs() const
 	{
-		return std::isnan(x) || std::isnan(y);
+		return is_NaN(x) || is_NaN(y);
 	}
 
 	// Mathematical operations
@@ -70,6 +81,9 @@ public:
 		if (i == 0) return x;
 		return y;
 	}
+
+	[[nodiscard]] constexpr bool operator==(const Vec2<T>& v) const { return x == v.x && y == v.y; };
+	[[nodiscard]] constexpr bool operator!=(const Vec2<T>& v) const { return x != v.x || y != v.y; };
 
 	// Arithmetic operators
 	
@@ -157,9 +171,12 @@ template<typename T>
 	return v * s;
 }
 
+// Forward declare Normal3
+template<typename T>
+class Normal3;
 
 template<typename T>
-struct Vec3
+class Vec3
 {
 public:
 	T x = 0, y = 0, z = 0;
@@ -171,12 +188,13 @@ public:
 	{
 		assert(!has_NaNs());
 	};
+	constexpr Vec3(const Normal3<T>& n);
 
 	// State checking
 
 	[[nodiscard]] constexpr bool has_NaNs() const
 	{
-		return std::isnan(x) || std::isnan(y) || std::isnan(z);
+		return is_NaN(x) || is_NaN(y) || is_NaN(z);
 	}
 
 	// Mathematical operations
@@ -217,6 +235,15 @@ public:
 		if (i == 0) return x;
 		if (i == 1) return y;
 		return z;
+	}
+
+	[[nodiscard]] constexpr bool operator==(const Vec3<T>& v) const
+	{
+		return x == v.x && y == v.y && z == v.z;
+	}
+	[[nodiscard]] constexpr bool operator!=(const Vec3<T>& v) const
+	{
+		return x != v.x || y != v.y || z != v.z;
 	}
 
 	// Arithmetic operators
@@ -269,13 +296,12 @@ public:
 	{
 		return Vec3<T>(-x, -y, -z);
 	}
-
 };
 
 template<typename T>
 [[nodiscard]] constexpr Vec3<T> abs(const Vec3<T>& v)
 {
-	return Vec3<T>(std::abs(v.x), std::abs(v.y), std::abs(v.z);
+	return Vec3<T>(std::abs(v.x), std::abs(v.y), std::abs(v.z));
 }
 
 template<typename T>
@@ -319,10 +345,10 @@ template<typename T>
 constexpr void create_coordinate_system(const Vec3<T>& v1, Vec3<T>* v2_out, Vec3<T>* v3_out)
 {
 	if (std::abs(v1.x) > std::abs(v1.y))
-		*v2 = Vector3<T>(-v1.z, 0, v1.x) / sqrt(v1.x * v1.x + v1.z * v1.z);
+		*v2_out = Vector3<T>(-v1.z, 0, v1.x) / sqrt(v1.x * v1.x + v1.z * v1.z);
 	else
-		*v2 = Vector3<T>(0, v1.z, v1.y) / sqrt(v1.y * v1.y + v1.z * v1.z);
-	*v3 = cross(v1, *v2);
+		*v2_out = Vector3<T>(0, v1.z, v1.y) / sqrt(v1.y * v1.y + v1.z * v1.z);
+	*v3_out = cross(v1, *v2_out);
 }
 
 // Operators related to Vec3
@@ -344,7 +370,7 @@ typedef Vec3<Float> Vec3f;
 ///////////////////////////////////////////////// Points
 
 template<typename T>
-struct Point3
+class Point3
 {
 public:
 	T x, y, z;
@@ -372,7 +398,7 @@ public:
 
 	[[nodiscard]] constexpr bool has_NaNs() const
 	{
-		return std::isnan(x) || std::isnan(y) || std::isnan(z);
+		return is_NaN(x) || is_NaN(y) || is_NaN(z);
 	}
 
 	// Operators
@@ -390,6 +416,15 @@ public:
 		if (i == 0) return x;
 		if (i == 1) return y;
 		return z;
+	}
+
+	[[nodiscard]] constexpr bool operator==(const Point3<T>& p) const
+	{
+		return x == p.x && y == p.y && z == p.z;
+	}
+	[[nodiscard]] constexpr bool operator!=(const Point3<T>& p) const
+	{
+		return x != p.x || y != p.y || z != p.z;
 	}
 
 	// Arithmetic operators
@@ -425,10 +460,6 @@ public:
 	{
 		x += rhs.x; y += rhs.y; z += rhs.z;
 		return *this;
-	}
-	[[nodiscard]] constexpr Point3<T> operator-(const Point3<T>& rhs) const
-	{
-		return Point3<T>(x - rhs.x, y - rhs.y, z - rhs.z);
 	}
 	constexpr Point3<T>& operator-=(const Point3<T>& rhs)
 	{
@@ -480,7 +511,7 @@ template<typename T>
 }
 
 template<typename T>
-[[nodiscard]] constexpr lerp(Float t, const Point3<T>& p0, const Point3<T>& p1)
+[[nodiscard]] constexpr Point3<T> lerp(Float t, const Point3<T>& p0, const Point3<T>& p1)
 {
 	return (1 - t) * p0 + t * p1;
 }
@@ -495,7 +526,7 @@ template<typename T>
 		std::min(p0.x, p1.x),
 		std::min(p0.y, p1.y),
 		std::min(p0.z, p1.z)
-		)
+		);
 }
 /// <summary>
 /// Computes the component-wise maximum of the two points.
@@ -507,7 +538,7 @@ template<typename T>
 		std::max(p0.x, p1.x),
 		std::max(p0.y, p1.y),
 		std::max(p0.z, p1.z)
-		)
+		);
 }
 
 template<typename T>
@@ -543,7 +574,7 @@ template<typename T>
 
 
 template<typename T>
-struct Point2
+class Point2
 {
 public:
 	T x, y;
@@ -576,7 +607,7 @@ public:
 
 	[[nodiscard]] constexpr bool has_NaNs() const
 	{
-		return std::isnan(x) || std::isnan(y);
+		return is_NaN(x) || is_NaN(y);
 	}
 
 	// Operators
@@ -593,6 +624,9 @@ public:
 		if (i == 0) return x;
 		return y;
 	}
+
+	[[nodiscard]] constexpr bool operator==(const Point2<T>& p) const { return x == p.x && y == p.y; };
+	[[nodiscard]] constexpr bool operator!=(const Point2<T>& p) const { return x != p.x || y != p.y; };
 
 	// Arithmetic operators
 
@@ -627,10 +661,6 @@ public:
 	{
 		x += rhs.x; y += rhs.y;
 		return *this;
-	}
-	[[nodiscard]] constexpr Point2<T> operator-(const Point2<T>& rhs) const
-	{
-		return Point2<T>(x - rhs.x, y - rhs.y);
 	}
 	constexpr Point2<T>& operator-=(const Point2<T>& rhs)
 	{
@@ -682,7 +712,7 @@ template<typename T>
 }
 
 template<typename T>
-[[nodiscard]] constexpr lerp(Float t, const Point2<T>& p0, const Point2<T>& p1)
+[[nodiscard]] constexpr Point2<T> lerp(Float t, const Point2<T>& p0, const Point2<T>& p1)
 {
 	return (1 - t) * p0 + t * p1;
 }
@@ -696,7 +726,7 @@ template<typename T>
 	return Point2<T>(
 		std::min(p0.x, p1.x),
 		std::min(p0.y, p1.y)
-		)
+		);
 }
 /// <summary>
 /// Computes the component-wise maximum of the two points.
@@ -707,7 +737,7 @@ template<typename T>
 	return Point2<T>(
 		std::max(p0.x, p1.x),
 		std::max(p0.y, p1.y)
-		)
+		);
 }
 
 template<typename T>
@@ -751,7 +781,7 @@ typedef Point3<Float>	Point3f;
 ///////////////////////////////////////////////// Surface Normals
 
 template<typename T>
-struct Normal3
+class Normal3
 {
 public:
 	T x = 0, y = 0, z = 0;
@@ -772,7 +802,7 @@ public:
 
 	[[nodiscard]] constexpr bool has_NaNs() const
 	{
-		return std::isnan(x) || std::isnan(y) || std::isnan(z);
+		return is_NaN(x) || is_NaN(y) || is_NaN(z);
 	}
 
 	// Mathematical operations
@@ -869,7 +899,7 @@ public:
 };
 
 template<typename T>
-inline constexpr Vec3<T>::Vec3(const Normal<T>& n) : x(n.x), y(n.y), z(n.z)
+constexpr Vec3<T>::Vec3(const Normal3<T>& n) : x(n.x), y(n.y), z(n.z)
 {
 	assert(!n.has_NaNs());
 }
@@ -883,7 +913,7 @@ template<typename T>
 template<typename T>
 [[nodiscard]] constexpr Normal3<T> abs(const Normal3<T>& n)
 {
-	return Normal3<T>(std::abs(n.x), std::abs(n.y), std::abs(n.z);
+	return Normal3<T>(std::abs(n.x), std::abs(n.y), std::abs(n.z));
 }
 
 template<typename T>
@@ -946,8 +976,8 @@ public:
 	{};
 	constexpr Ray(const Point3f& o, const Vec3f& d,
 				  Float t_max = INFINITY, Float time = 0,
-				  const Medium* medium)
-		: o(o), d(d), medium(nullptr), t_max(t_max), time(time), medium(medium)
+				  const Medium* medium = nullptr)
+		: o(o), d(d), medium(nullptr), t_max(t_max), time(time)
 	{};
 
 	[[nodiscard]] constexpr Point3f operator()(Float t) const
@@ -960,10 +990,10 @@ public:
 class RayDifferential : public Ray
 {
 public:
-	Point3f rx_o, ry_o;
-	Vec3f rx_d, ry_d;
+	Point3f rx_o{}, ry_o{};
+	Vec3f rx_d{}, ry_d{};
 	
-	bool has_differentials;
+	bool has_differentials = false;
 
 public:
 	constexpr RayDifferential() : has_differentials(false)
@@ -977,6 +1007,8 @@ public:
 		: Ray(r), has_differentials(false)
 	{}
 
+	// Public Methods
+	
 	constexpr void scale_differentials(Float s)
 	{
 		rx_o = o + (rx_o - o) * s;

@@ -5,7 +5,8 @@ set(SOURCES
 	"main.cpp"
     "vecmath.h" 
     "vecmath.cpp"
- "aito.h")
+    "aito.h" 
+    "geometry.h" "geometry.cpp")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
