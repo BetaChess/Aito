@@ -6,7 +6,11 @@ set(SOURCES
     "vecmath.h" 
     "vecmath.cpp"
     "aito.h" 
-    "geometry.h" "geometry.cpp")
+    "geometry.h" 
+    "geometry.cpp"
+    "logger.h"
+    "logger.cpp"
+)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
@@ -15,4 +19,8 @@ set_target_properties(${PROJECT_NAME}
         CXX_STANDARD 20
         CXX_STANDARD_REQUIRED YES
         CXX_EXTENSIONS NO
+)
+
+target_include_directories(${PROJECT_NAME} 
+	PUBLIC ../vendor/spdlog/include
 )

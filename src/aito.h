@@ -3,6 +3,8 @@
 
 #include <cmath>
 
+#include "logger.h"
+
 namespace aito
 {
 // Float Type Definitions
