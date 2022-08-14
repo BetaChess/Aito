@@ -6,6 +6,12 @@
 #include <algorithm>
 #include <cmath>
 #include <cassert>
+#include <array>
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+
 
 namespace aito
 {
@@ -26,16 +32,24 @@ inline bool is_NaN(const int x)
 template<typename T>
 class Vec2
 {
+private:
+	glm::vec<2, T, glm::packed_highp> v_;
+
 public:
-	T x = 0, y = 0;
+	T& x = v_.x;
+	T& y = v_.y;
 
 public:
 
 	constexpr Vec2() = default;
-	constexpr Vec2(T x, T y) : x(x), y(y) 
+	constexpr Vec2(T x, T y) : v_(x, y)
 	{
 		assert(!has_NaNs());
 	};
+	constexpr Vec2(glm::vec<2, T, glm::packed_highp> vec) : v_(vec)
+	{
+		assert(!has_NaNs());
+	}
 
 	// State checking
 
@@ -67,52 +81,49 @@ public:
 		return *this;
 	}
 
-	// Operators
-
 	[[nodiscard]] constexpr T operator[](size_t i) const
 	{
 		assert(i >= 0 && i <= 1 && "Out of bounds vector access!");
-		if (i == 0) return x;
-		return y;
+
+		return v_[i];
 	}
 	constexpr T& operator[](size_t i)
 	{
 		assert(i >= 0 && i <= 1 && "Out of bounds vector access!");
-		if (i == 0) return x;
-		return y;
+
+		return v_[i];
 	}
 
-	[[nodiscard]] constexpr bool operator==(const Vec2<T>& v) const { return x == v.x && y == v.y; };
-	[[nodiscard]] constexpr bool operator!=(const Vec2<T>& v) const { return x != v.x || y != v.y; };
+	[[nodiscard]] constexpr bool operator==(const Vec2<T>& v) const { return v_ == v.v_; };
+	[[nodiscard]] constexpr bool operator!=(const Vec2<T>& v) const { return v_ != v.v_; };
 
-	// Arithmetic operators
-	
+
 	[[nodiscard]] constexpr Vec2<T> operator+(const Vec2<T>& rhs) const
 	{
-		return Vec2<T>(x + rhs.x, y + rhs.y);
+		return Vec2<T>(v_ + rhs.v_);
 	}
 	constexpr Vec2<T>& operator+=(const Vec2<T>& rhs)
 	{
-		x += rhs.x; y += rhs.y;
+		v_ += rhs.v_;
 		return *this;
 	}
 	[[nodiscard]] constexpr Vec2<T> operator-(const Vec2<T>& rhs) const
 	{
-		return Vec2<T>(x - rhs.x, y - rhs.y);
+		return Vec2<T>(v_ - rhs.v_);
 	}
 	constexpr Vec2<T>& operator-=(const Vec2<T>& rhs)
 	{
-		x -= rhs.x; y -= rhs.y;
+		v_ -= rhs.v_;
 		return *this;
 	}
 
 	[[nodiscard]] constexpr Vec2<T> operator*(T s) const
 	{
-		return Vec2<T>(x * s, y * s);
+		return Vec2<T>(v_ * s);
 	}
 	constexpr Vec2<T>& operator*=(T s)
 	{
-		x *= s; y *= s;
+		v_ *= s;
 		return *this;
 	}
 	[[nodiscard]] constexpr Vec2<T> operator/(T s) const
@@ -120,47 +131,48 @@ public:
 		assert(s != 0);
 		Float inv = static_cast<Float>(1) / static_cast<Float>(s);
 
-		return Vec2<T>(x * inv, y * inv);
+		return Vec2<T>(v_ * inv);
 	}
 	constexpr Vec2<T>& operator/=(T s)
 	{
 		assert(s != 0);
 		Float inv = static_cast<Float>(1) / static_cast<Float>(s);
 
-		x *= inv; y *= inv;
+		v_ *= inv;
 		return *this;
 	}
 
 	[[nodiscard]] constexpr Vec2<T> operator-() const
 	{
-		return Vec2<T>(-x, -y);
+		return Vec2<T>(-v_);
 	}
 
+	// Friends
+	template<typename T>
+	friend class Point2;
+
+	template<typename T>
+	[[nodiscard]] friend constexpr Vec2<T> abs(const Vec2<T>& v);
+	template<typename T>
+	[[nodiscard]] friend constexpr T dot(const Vec2<T>& v, const Vec2<T>& w);
 };
 
 template<typename T>
 [[nodiscard]] constexpr Vec2<T> abs(const Vec2<T>& v)
 {
-	return Vec2<T>(std::abs(v.x), std::abs(v.y));
+	return glm::abs(v.v_);
 }
 
 template<typename T>
 [[nodiscard]] constexpr T dot(const Vec2<T>& v, const Vec2<T>& w)
 {
-	return v.x * w.x + v.y * w.y;
+	return glm::dot(v.v_, w.v_);
 }
 
 template<typename T>
 [[nodiscard]] constexpr T abs_dot(const Vec2<T>& v, const Vec2<T>& w)
 {
-	return std::abs(dot(v, w));
-}
-
-template<typename T>
-[[nodiscard]] constexpr Vec2<T> normalized(const Vec2<T>& v)
-{
-	Float L = v.length();
-	return v / L;
+	return abs(dot(v, w));
 }
 
 // Operators related to Vec2
@@ -171,6 +183,8 @@ template<typename T>
 	return v * s;
 }
 
+
+
 // Forward declare Normal3
 template<typename T>
 class Normal3;
@@ -178,13 +192,22 @@ class Normal3;
 template<typename T>
 class Vec3
 {
+private:
+	glm::vec<3, T, glm::packed_highp> v_;
+
 public:
-	T x = 0, y = 0, z = 0;
+	T& x = v_.x;
+	T& y = v_.y;
+	T& z = v_.z;
 
 public:
 
 	constexpr Vec3() = default;
-	constexpr Vec3(T x, T y, T z) : x(x), y(y), z(z)
+	constexpr Vec3(T x, T y, T z) : v_(x, y, z)
+	{
+		assert(!has_NaNs());
+	};
+	constexpr Vec3(glm::vec<3, T, glm::packed_highp> vec) : v_(vec)
 	{
 		assert(!has_NaNs());
 	};
@@ -220,60 +243,49 @@ public:
 		return *this;
 	}
 
-	// Operators
-
 	[[nodiscard]] constexpr T operator[](size_t i) const
 	{
 		assert(i >= 0 && i <= 2 && "Out of bounds vector access!");
-		if (i == 0) return x;
-		if (i == 1) return y;
-		return z;
+		
+		return v_[i];
 	}
 	constexpr T& operator[](size_t i)
 	{
 		assert(i >= 0 && i <= 2 && "Out of bounds vector access!");
-		if (i == 0) return x;
-		if (i == 1) return y;
-		return z;
+		
+		return v_[i];
 	}
 
-	[[nodiscard]] constexpr bool operator==(const Vec3<T>& v) const
-	{
-		return x == v.x && y == v.y && z == v.z;
-	}
-	[[nodiscard]] constexpr bool operator!=(const Vec3<T>& v) const
-	{
-		return x != v.x || y != v.y || z != v.z;
-	}
+	[[nodiscard]] constexpr bool operator==(const Vec3<T>& v) const { return v_ == v.v_; };
+	[[nodiscard]] constexpr bool operator!=(const Vec3<T>& v) const { return v_ != v.v_; };
 
-	// Arithmetic operators
 
 	[[nodiscard]] constexpr Vec3<T> operator+(const Vec3<T>& rhs) const
 	{
-		return Vec3<T>(x + rhs.x, y + rhs.y, z + rhs.z);
+		return Vec3<T>(v_ + rhs.v_);
 	}
 	constexpr Vec3<T>& operator+=(const Vec3<T>& rhs)
 	{
-		x += rhs.x; y += rhs.y; z += rhs.z;
+		v_ += rhs.v_;
 		return *this;
 	}
 	[[nodiscard]] constexpr Vec3<T> operator-(const Vec3<T>& rhs) const
 	{
-		return Vec3<T>(x - rhs.x, y - rhs.y, z - rhs.z);
+		return Vec3<T>(v_ - rhs.v_);
 	}
 	constexpr Vec3<T>& operator-=(const Vec3<T>& rhs)
 	{
-		x -= rhs.x; y -= rhs.y; z -= rhs.z;
+		v_ -= rhs.v_;
 		return *this;
 	}
 
 	[[nodiscard]] constexpr Vec3<T> operator*(T s) const
 	{
-		return Vec3<T>(x * s, y * s, z * s);
+		return Vec3<T>(v_ * s);
 	}
 	constexpr Vec3<T>& operator*=(T s)
 	{
-		x *= s; y *= s; z *= s;
+		v_ *= s;
 		return *this;
 	}
 	[[nodiscard]] constexpr Vec3<T> operator/(T s) const
@@ -281,58 +293,58 @@ public:
 		assert(s != 0);
 		Float inv = static_cast<Float>(1) / static_cast<Float>(s);
 
-		return Vec3<T>(x * inv, y * inv, z * inv);
+		return Vec3<T>(v_ * inv);
 	}
 	constexpr Vec3<T>& operator/=(T s)
 	{
 		assert(s != 0);
 		Float inv = static_cast<Float>(1) / static_cast<Float>(s);
 
-		x *= inv; y *= inv; z *= inv;
+		v_ *= inv;
 		return *this;
 	}
 
 	[[nodiscard]] constexpr Vec3<T> operator-() const
 	{
-		return Vec3<T>(-x, -y, -z);
+		return Vec3<T>(-v_);
 	}
+
+	// Friends
+	template<typename T>
+	friend class Point3;
+
+	template<typename T>
+	[[nodiscard]] friend constexpr Vec3<T> abs(const Vec3<T>& v);
+	template<typename T>
+	[[nodiscard]] friend constexpr T dot(const Vec3<T>& v, const Vec3<T>& w);
+	template<typename T>
+	[[nodiscard]] friend constexpr Vec3<T> cross(const Vec3<T>& v, const Vec3<T>& w);
 };
+
 
 template<typename T>
 [[nodiscard]] constexpr Vec3<T> abs(const Vec3<T>& v)
 {
-	return Vec3<T>(std::abs(v.x), std::abs(v.y), std::abs(v.z));
+	return glm::abs(v.v_);
 }
 
 template<typename T>
 [[nodiscard]] constexpr T dot(const Vec3<T>& v, const Vec3<T>& w)
 {
-	return v.x * w.x + v.y * w.y + v.z * w.z;
+	return glm::dot(v.v_, w.v_);
 }
 
 template<typename T>
 [[nodiscard]] constexpr T abs_dot(const Vec3<T>& v, const Vec3<T>& w)
 {
-	return std::abs(dot(v, w));
-}
-
-template<typename T>
-[[nodiscard]] constexpr Vec3<T> normalized(const Vec3<T>& v)
-{
-	Float L = v.length();
-	return v / L;
+	return abs(dot(v, w));
 }
 
 template<typename T>
 [[nodiscard]] constexpr Vec3<T> cross(const Vec3<T>& v, const Vec3<T>& w)
 {
-	const double vx = v.x, vy = v.y, vz = v.z;
-	const double wx = w.x, wy = w.y, wz = w.z;
-	return Vec3<T>(
-		(vy * wz) - (vz * wy),
-		(vz * wx) - (vx * wz),
-		(vx * wy) - (vy * wx)
-		);
+	
+	return Vec3<T>(glm::cross(v.v_, w.v_));
 }
 
 /// <summary>
@@ -345,9 +357,9 @@ template<typename T>
 constexpr void create_coordinate_system(const Vec3<T>& v1, Vec3<T>* v2_out, Vec3<T>* v3_out)
 {
 	if (std::abs(v1.x) > std::abs(v1.y))
-		*v2_out = Vector3<T>(-v1.z, 0, v1.x) / sqrt(v1.x * v1.x + v1.z * v1.z);
+		*v2_out = Vec3<T>(-v1.z, 0, v1.x) / sqrt(v1.x * v1.x + v1.z * v1.z);
 	else
-		*v2_out = Vector3<T>(0, v1.z, v1.y) / sqrt(v1.y * v1.y + v1.z * v1.z);
+		*v2_out = Vec3<T>(0, v1.z, v1.y) / sqrt(v1.y * v1.y + v1.z * v1.z);
 	*v3_out = cross(v1, *v2_out);
 }
 
@@ -358,7 +370,6 @@ template<typename T>
 {
 	return v * s;
 }
-
 
 /// Typedefs
 
@@ -372,18 +383,27 @@ typedef Vec3<Float> Vec3f;
 template<typename T>
 class Point3
 {
+private:
+	glm::vec<3, T, glm::packed_highp> v_;
+
 public:
-	T x, y, z;
-	
+	T& x = v_.x;
+	T& y = v_.y;
+	T& z = v_.z;
+
 public:
 	constexpr Point3() = default;
-	constexpr Point3(T x, T y, T z) : x(x), y(y), z(z)
+	constexpr Point3(T x, T y, T z) : v_(x, y, z)
+	{
+		assert(!has_NaNs());
+	};
+	constexpr Point3(glm::vec<3, T, glm::packed_highp> vec) : v_(vec)
 	{
 		assert(!has_NaNs());
 	};
 	template<typename U>
 	constexpr explicit Point3(const Point3<U>& p)
-		: x(static_cast<U>(p.x)), y(static_cast<U>(p.y)), z(static_cast<U>(p.z))
+		: v_(p.v_)
 	{
 		assert(!has_NaNs());
 	};
@@ -406,74 +426,72 @@ public:
 	[[nodiscard]] constexpr T operator[](size_t i) const
 	{
 		assert(i >= 0 && i <= 2 && "Out of bounds vector access!");
-		if (i == 0) return x;
-		if (i == 1) return y;
-		return z;
+		
+		return v_[i];
 	}
 	constexpr T& operator[](size_t i)
 	{
 		assert(i >= 0 && i <= 2 && "Out of bounds vector access!");
-		if (i == 0) return x;
-		if (i == 1) return y;
-		return z;
+
+		return v_[i];
 	}
 
 	[[nodiscard]] constexpr bool operator==(const Point3<T>& p) const
 	{
-		return x == p.x && y == p.y && z == p.z;
+		return v_ == p.v_;
 	}
 	[[nodiscard]] constexpr bool operator!=(const Point3<T>& p) const
 	{
-		return x != p.x || y != p.y || z != p.z;
+		return v_ != p.v_;
 	}
 
 	// Arithmetic operators
 
 	[[nodiscard]] constexpr Point3<T> operator+(const Vec3<T>& v) const
 	{
-		return Point3<T>(x + v.x, y + v.y, z + v.z);
+		return Point3<T>(v_ + v.v_);
 	}
 	constexpr Point3<T>& operator+=(const Vec3<T>& v)
 	{
-		x += v.x; y += v.y; z += v.z;
+		v_ += v.v_;
 		return *this;
 	}
 	[[nodiscard]] constexpr Point3<T> operator-(const Vec3<T>& v) const
 	{
-		return Point3<T>(x - v.x, y - v.y, z - v.z);
+		return Point3<T>(v_ - v.v_);
 	}
 	constexpr Point3<T>& operator-=(const Vec3<T>& v)
 	{
-		x -= v.x; y -= v.y; z -= v.z;
+		v_ -= v.v_;
 		return *this;
 	}
 	[[nodiscard]] constexpr Vec3<T> operator-(const Point3<T>& p) const
 	{
-		return Vec3<T>(x - p.x, y - p.y, z - p.z);
+		return Vec3<T>(v_ - p.v_);
 	}
 
 	[[nodiscard]] constexpr Point3<T> operator+(const Point3<T>& rhs) const
 	{
-		return Point3<T>(x + rhs.x, y + rhs.y, z + rhs.z);
+		return Point3<T>(v_ + rhs.v_);
 	}
 	constexpr Point3<T>& operator+=(const Point3<T>& rhs)
 	{
-		x += rhs.x; y += rhs.y; z += rhs.z;
+		v_ += rhs.v_;
 		return *this;
 	}
 	constexpr Point3<T>& operator-=(const Point3<T>& rhs)
 	{
-		x -= rhs.x; y -= rhs.y; z -= rhs.z;
+		v_ -= rhs.v_;
 		return *this;
 	}
 
 	[[nodiscard]] constexpr Point3<T> operator*(T s) const
 	{
-		return Point3<T>(x * s, y * s, z * s);
+		return Point3<T>(v_ * s);
 	}
 	constexpr Point3<T>& operator*=(T s)
 	{
-		x *= s; y *= s; z *= s;
+		v_ *= s;
 		return *this;
 	}
 	[[nodiscard]] constexpr Point3<T> operator/(T s) const
@@ -481,20 +499,20 @@ public:
 		assert(s != 0);
 		Float inv = static_cast<Float>(1) / static_cast<Float>(s);
 
-		return Point3<T>(x * inv, y * inv, z * inv);
+		return Point3<T>(v_ * s);
 	}
 	constexpr Point3<T>& operator/=(T s)
 	{
 		assert(s != 0);
 		Float inv = static_cast<Float>(1) / static_cast<Float>(s);
 
-		x *= inv; y *= inv; z *= inv;
+		v_ *= inv;
 		return *this;
 	}
 
 	[[nodiscard]] constexpr Point3<T> operator-() const
 	{
-		return Point3<T>(-x, -y, -z);
+		return Point3<T>(-v_);
 	}
 
 };
@@ -563,7 +581,7 @@ template<typename T>
 	return Point3<T>(p[x], p[y], p[z]);
 }
 
-// Operators related to p1
+// Operators related to Point3
 
 template<typename T>
 [[nodiscard]] constexpr Point3<T> operator*(T s, const Point3<T>& v)
@@ -572,31 +590,38 @@ template<typename T>
 }
 
 
-
 template<typename T>
 class Point2
 {
+private:
+	glm::vec<2, T, glm::packed_highp> v_;
+
 public:
-	T x, y;
+	T& x = v_.x;
+	T& y = v_.y;
 
 public:
 
 	constexpr Point2() = default;
-	constexpr Point2(T x, T y) : x(x), y(y)
+	constexpr Point2(T x, T y) : v_(x, y)
+	{
+		assert(!has_NaNs());
+	};
+	constexpr Point2(glm::vec<2, T, glm::packed_highp> vec) : v_(vec)
 	{
 		assert(!has_NaNs());
 	};
 	template<typename U>
-	constexpr explicit Point2(const Point2<U>& p) 
-		: x(static_cast<U>(p.x)), y(static_cast<U>(p.y))
+	constexpr explicit Point2(const Point2<U>& p)
+		: v_(static_cast<U>(p.x), static_cast<U>(p.y))
 	{
 		assert(!has_NaNs());
 	};
-	constexpr explicit Point2(const Point3<T>& p) : x(p.x), y(p.y)
+	constexpr explicit Point2(const Point3<T>& p) : v_(p.x, p.y)
 	{
 		assert(!has_NaNs());
 	};
-	
+
 	template<typename U>
 	explicit operator Vec2<U>() const
 	{
@@ -615,66 +640,66 @@ public:
 	[[nodiscard]] constexpr T operator[](size_t i) const
 	{
 		assert(i >= 0 && i <= 1 && "Out of bounds access!");
-		if (i == 0) return x;
-		return y;
+		
+		return v_[i];
 	}
 	constexpr T& operator[](size_t i)
 	{
 		assert(i >= 0 && i <= 1 && "Out of bounds access!");
-		if (i == 0) return x;
-		return y;
+
+		return v_[i];
 	}
 
-	[[nodiscard]] constexpr bool operator==(const Point2<T>& p) const { return x == p.x && y == p.y; };
-	[[nodiscard]] constexpr bool operator!=(const Point2<T>& p) const { return x != p.x || y != p.y; };
+	[[nodiscard]] constexpr bool operator==(const Point2<T>& p) const { return v_ == p.v_; };
+	[[nodiscard]] constexpr bool operator!=(const Point2<T>& p) const { return v_ != p.v_; };
 
 	// Arithmetic operators
 
 	[[nodiscard]] constexpr Point2<T> operator+(const Vec2<T>& v) const
 	{
-		return Point2<T>(x + v.x, y + v.y);
+		return Point2<T>(v_ + v.v_);
 	}
 	constexpr Point2<T>& operator+=(const Vec2<T>& v)
 	{
-		x += v.x; y += v.y;
+		v_ += v.v_
 		return *this;
 	}
 	[[nodiscard]] constexpr Point2<T> operator-(const Vec2<T>& v) const
 	{
-		return Point2<T>(x - v.x, y - v.y);
+		return Point2<T>(v_ - v.v_);
 	}
 	constexpr Point2<T>& operator-=(const Vec2<T>& v)
 	{
-		x -= v.x; y -= v.y;
+		v_ -= v.v_
 		return *this;
 	}
 	[[nodiscard]] constexpr Vec2<T> operator-(const Point2<T>& p) const
 	{
-		return Vec2<T>(x - p.x, y - p.y);
+		return Vec2<T>(v_ - p.v_);
 	}
 
 	[[nodiscard]] constexpr Point2<T> operator+(const Point2<T>& rhs) const
 	{
-		return Point2<T>(x + rhs.x, y + rhs.y);
+		return Point2<T>(v_ + rhs.v_);
 	}
 	constexpr Point2<T>& operator+=(const Point2<T>& rhs)
 	{
-		x += rhs.x; y += rhs.y;
+		v_ += rhs.v_
 		return *this;
 	}
 	constexpr Point2<T>& operator-=(const Point2<T>& rhs)
 	{
-		x -= rhs.x; y -= rhs.y;
+		v_ -= rhs.v_
 		return *this;
 	}
 
 	[[nodiscard]] constexpr Point2<T> operator*(T s) const
 	{
-		return Point2<T>(x * s, y * s);
+		return Point2<T>(v_ * s);
 	}
 	constexpr Point2<T>& operator*=(T s)
 	{
-		x *= s; y *= s;
+		v_ *= s;
 		return *this;
 	}
 	[[nodiscard]] constexpr Point2<T> operator/(T s) const
@@ -682,23 +707,24 @@ public:
 		assert(s != 0);
 		Float inv = static_cast<Float>(1) / static_cast<Float>(s);
 
-		return Point2<T>(x * inv, y * inv);
+		return Point2<T>(v_ * inv);
 	}
 	constexpr Point2<T>& operator/=(T s)
 	{
 		assert(s != 0);
 		Float inv = static_cast<Float>(1) / static_cast<Float>(s);
 
-		x *= inv; y *= inv;
+		v_ *= inv;
 		return *this;
 	}
 
 	[[nodiscard]] constexpr Point2<T> operator-() const
 	{
-		return Point2<T>(-x, -y);
+		return Point2<T>(-v_);
 	}
 
 };
+
 
 template<typename T>
 [[nodiscard]] constexpr Float distance_squared(const Point2<T>& p0, const Point2<T>& p1)
@@ -770,7 +796,6 @@ template<typename T>
 	return v * s;
 }
 
-
 /// Typedefs
 
 typedef Point2<int>		Point2i;
@@ -778,22 +803,32 @@ typedef Point2<Float>	Point2f;
 typedef Point3<int>		Point3i;
 typedef Point3<Float>	Point3f;
 
+
 ///////////////////////////////////////////////// Surface Normals
 
 template<typename T>
 class Normal3
 {
+private:
+	glm::vec<3, T, glm::packed_highp> v_;
+
 public:
-	T x = 0, y = 0, z = 0;
+	T& x = v_.x;
+	T& y = v_.y;
+	T& z = v_.z;
 
 public:
 
 	constexpr Normal3() = default;
-	constexpr Normal3(T x, T y, T z) : x(x), y(y), z(z)
+	constexpr Normal3(T x, T y, T z) : v_(x, y, z)
 	{
 		assert(!has_NaNs());
 	};
-	explicit constexpr Normal3(const Vec3<T>& v) : x(v.x), y(v.y), z(v.z)
+	constexpr Normal3(glm::vec<3, T, glm::packed_highp> vec) : v_(vec)
+	{
+		assert(!has_NaNs());
+	};
+	explicit constexpr Normal3(const Vec3<T>& v) : v_(v.x, v.y, v.z)
 	{
 		assert(!has_NaNs());
 	};
@@ -833,46 +868,44 @@ public:
 	[[nodiscard]] constexpr T operator[](size_t i) const
 	{
 		assert(i >= 0 && i <= 2 && "Out of bounds vector access!");
-		if (i == 0) return x;
-		if (i == 1) return y;
-		return z;
+		
+		return v_[i];
 	}
 	constexpr T& operator[](size_t i)
 	{
 		assert(i >= 0 && i <= 2 && "Out of bounds vector access!");
-		if (i == 0) return x;
-		if (i == 1) return y;
-		return z;
+
+		return v_[i];
 	}
 
 	// Arithmetic operators
 
 	[[nodiscard]] constexpr Normal3<T> operator+(const Normal3<T>& rhs) const
 	{
-		return Normal3<T>(x + rhs.x, y + rhs.y, z + rhs.z);
+		return Normal3<T>(v_ + rhs.v_);
 	}
 	constexpr Normal3<T>& operator+=(const Normal3<T>& rhs)
 	{
-		x += rhs.x; y += rhs.y; z += rhs.z;
+		v_ += rhs.v_
 		return *this;
 	}
 	[[nodiscard]] constexpr Normal3<T> operator-(const Normal3<T>& rhs) const
 	{
-		return Normal3<T>(x - rhs.x, y - rhs.y, z - rhs.z);
+		return Normal3<T>(v_ - rhs.v_);
 	}
 	constexpr Normal3<T>& operator-=(const Normal3<T>& rhs)
 	{
-		x -= rhs.x; y -= rhs.y; z -= rhs.z;
+		v_ -= rhs.v_;
 		return *this;
 	}
 
 	[[nodiscard]] constexpr Normal3<T> operator*(T s) const
 	{
-		return Normal3<T>(x * s, y * s, z * s);
+		return Normal3<T>(v_ * s);
 	}
 	constexpr Normal3<T>& operator*=(T s)
 	{
-		x *= s; y *= s; z *= s;
+		v_ *= s;
 		return *this;
 	}
 	[[nodiscard]] constexpr Normal3<T> operator/(T s) const
@@ -880,26 +913,26 @@ public:
 		assert(s != 0);
 		Float inv = static_cast<Float>(1) / static_cast<Float>(s);
 
-		return Normal3<T>(x * inv, y * inv, z * inv);
+		return Normal3<T>(v_ * inv);
 	}
 	constexpr Normal3<T>& operator/=(T s)
 	{
 		assert(s != 0);
 		Float inv = static_cast<Float>(1) / static_cast<Float>(s);
 
-		x *= inv; y *= inv; z *= inv;
+		v_ *= s;
 		return *this;
 	}
 
 	[[nodiscard]] constexpr Normal3<T> operator-() const
 	{
-		return Normal3<T>(-x, -y, -z);
+		return Normal3<T>(-v_);
 	}
 
 };
 
 template<typename T>
-constexpr Vec3<T>::Vec3(const Normal3<T>& n) : x(n.x), y(n.y), z(n.z)
+constexpr Vec3<T>::Vec3(const Normal3<T>& n) : v_(n.x, n.y, n.z)
 {
 	assert(!n.has_NaNs());
 }
@@ -925,15 +958,9 @@ template<typename T>
 template<typename T>
 [[nodiscard]] constexpr T abs_dot(const Normal3<T>& n, const Normal3<T>& w)
 {
-	return std::abs(dot(n, w));
+	return abs(dot(n, w));
 }
 
-template<typename T>
-[[nodiscard]] constexpr Normal3<T> normalized(const Normal3<T>& n)
-{
-	Float L = n.length();
-	return n / L;
-}
 
 // Operators related to Normal3
 
@@ -948,6 +975,76 @@ template<typename T>
 
 typedef Normal3<int>	Normal3i;
 typedef Normal3<Float>	Normal3f;
+
+///////////////////////////////////////////////// 4 by 4 Matrix
+
+class Mat4
+{
+public:
+	glm::mat<4, 4, Float, glm::packed_highp> m{1};
+
+public:
+	constexpr Mat4() = default;
+	constexpr Mat4(glm::mat<4, 4, Float, glm::packed_highp> matrix) : m(matrix)
+	{}
+	constexpr Mat4(Float t00, Float t01, Float t02, Float t03,
+		 Float t10, Float t11, Float t12, Float t13,
+		 Float t20, Float t21, Float t22, Float t23,
+		 Float t30, Float t31, Float t32, Float t33)
+		: m(t00, t01, t02, t03,
+			t10, t11, t12, t13,
+			t20, t21, t22, t23,
+			t30, t31, t32, t33)
+	{};
+
+	// Public methods
+
+	constexpr Mat4& transpose()
+	{
+		m = glm::transpose(m);
+	}
+	[[nodiscard]] constexpr Mat4 get_transpose() const
+	{
+		return glm::transpose(m);
+	};
+
+	[[nodiscard]] constexpr Mat4 get_inverse() const
+	{
+		return glm::inverse(m);
+	};
+
+	// Operators
+
+	[[nodiscard]] constexpr bool operator==(const Mat4& rhs) const
+	{
+		return m == rhs.m;
+	}
+	[[nodiscard]] constexpr bool operator!=(const Mat4& rhs) const
+	{
+		return m != rhs.m;
+	}
+
+	[[nodiscard]] constexpr Mat4 operator*(const Mat4& rhs) const
+	{
+		Mat4 r;
+	
+		for (size_t i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				r.m[i][j] = 
+					m[i][0] * rhs.m[0][j] +
+					m[i][1] * rhs.m[1][j] +
+					m[i][2] * rhs.m[2][j] +
+					m[i][3] * rhs.m[3][j];
+	
+		return r;
+	}
+	constexpr Mat4& operator*=(const Mat4& rhs)
+	{
+		*this = (*this) * rhs;
+		return *this;
+	};
+
+};
 
 ///////////////////////////////////////////////// Rays
 

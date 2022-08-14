@@ -23,4 +23,5 @@ set_target_properties(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME} 
 	PUBLIC ../vendor/spdlog/include
+    PUBLIC ../vendor/glm
 )

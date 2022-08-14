@@ -6,3 +6,4 @@ project ("Aito")
 # Include sub-projects.
 add_subdirectory ("src")
 add_subdirectory ("vendor/spdlog")
+add_subdirectory ("vendor/glm")
