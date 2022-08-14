@@ -94,6 +94,12 @@ public:
 		return v_[i];
 	}
 
+	constexpr Vec2<T>& operator=(const Vec2<T>& v)
+	{
+		v_ = v.v_;
+		return *this;
+	};
+
 	[[nodiscard]] constexpr bool operator==(const Vec2<T>& v) const { return v_ == v.v_; };
 	[[nodiscard]] constexpr bool operator!=(const Vec2<T>& v) const { return v_ != v.v_; };
 
@@ -255,6 +261,12 @@ public:
 		
 		return v_[i];
 	}
+
+	constexpr Vec3<T>& operator=(const Vec3<T>& v)
+	{
+		v_ = v.v_;
+		return *this;
+	};
 
 	[[nodiscard]] constexpr bool operator==(const Vec3<T>& v) const { return v_ == v.v_; };
 	[[nodiscard]] constexpr bool operator!=(const Vec3<T>& v) const { return v_ != v.v_; };
@@ -435,6 +447,12 @@ public:
 
 		return v_[i];
 	}
+
+	constexpr Point3<T>& operator=(const Point3<T>& p)
+	{
+		v_ = p.v_;
+		return *this;
+	};
 
 	[[nodiscard]] constexpr bool operator==(const Point3<T>& p) const
 	{
@@ -650,6 +668,12 @@ public:
 		return v_[i];
 	}
 
+	constexpr Point2<T>& operator=(const Point2<T>& p)
+	{
+		v_ = p.v_;
+		return *this;
+	};
+
 	[[nodiscard]] constexpr bool operator==(const Point2<T>& p) const { return v_ == p.v_; };
 	[[nodiscard]] constexpr bool operator!=(const Point2<T>& p) const { return v_ != p.v_; };
 
@@ -661,7 +685,7 @@ public:
 	}
 	constexpr Point2<T>& operator+=(const Vec2<T>& v)
 	{
-		v_ += v.v_
+		v_ += v.v_;
 		return *this;
 	}
 	[[nodiscard]] constexpr Point2<T> operator-(const Vec2<T>& v) const
@@ -670,7 +694,7 @@ public:
 	}
 	constexpr Point2<T>& operator-=(const Vec2<T>& v)
 	{
-		v_ -= v.v_
+		v_ -= v.v_;
 		return *this;
 	}
 	[[nodiscard]] constexpr Vec2<T> operator-(const Point2<T>& p) const
@@ -684,12 +708,12 @@ public:
 	}
 	constexpr Point2<T>& operator+=(const Point2<T>& rhs)
 	{
-		v_ += rhs.v_
+		v_ += rhs.v_;
 		return *this;
 	}
 	constexpr Point2<T>& operator-=(const Point2<T>& rhs)
 	{
-		v_ -= rhs.v_
+		v_ -= rhs.v_;
 		return *this;
 	}
 
@@ -886,7 +910,7 @@ public:
 	}
 	constexpr Normal3<T>& operator+=(const Normal3<T>& rhs)
 	{
-		v_ += rhs.v_
+		v_ += rhs.v_;
 		return *this;
 	}
 	[[nodiscard]] constexpr Normal3<T> operator-(const Normal3<T>& rhs) const
@@ -999,7 +1023,7 @@ public:
 
 	// Public methods
 
-	constexpr Mat4& transpose()
+	inline Mat4& transpose()
 	{
 		m = glm::transpose(m);
 	}
@@ -1015,11 +1039,11 @@ public:
 
 	// Operators
 
-	[[nodiscard]] constexpr bool operator==(const Mat4& rhs) const
+	[[nodiscard]] inline bool operator==(const Mat4& rhs) const
 	{
 		return m == rhs.m;
 	}
-	[[nodiscard]] constexpr bool operator!=(const Mat4& rhs) const
+	[[nodiscard]] inline bool operator!=(const Mat4& rhs) const
 	{
 		return m != rhs.m;
 	}
