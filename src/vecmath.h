@@ -349,7 +349,7 @@ template<typename T>
 template<typename T>
 [[nodiscard]] constexpr T abs_dot(const Vec3<T>& v, const Vec3<T>& w)
 {
-	return abs(dot(v, w));
+	return std::abs(dot(v, w));
 }
 
 template<typename T>
@@ -982,7 +982,7 @@ template<typename T>
 template<typename T>
 [[nodiscard]] constexpr T abs_dot(const Normal3<T>& n, const Normal3<T>& w)
 {
-	return abs(dot(n, w));
+	return std::abs(dot(n, w));
 }
 
 
