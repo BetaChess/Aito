@@ -7,10 +7,12 @@
 #include <cmath>
 #include <cassert>
 #include <array>
+#include <type_traits>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_access.hpp>
 
 
 namespace aito
@@ -1004,63 +1006,116 @@ typedef Normal3<Float>	Normal3f;
 
 class Mat4
 {
-public:
-	glm::mat<4, 4, Float, glm::packed_highp> m{1};
+private:
+	using matType = glm::mat<4, 4, Float, glm::packed_highp>;
+
+	// Keep in mind that this is a glm matrix, and it thus uses column major notation.
+	matType m_{1};
 
 public:
 	constexpr Mat4() = default;
-	constexpr Mat4(glm::mat<4, 4, Float, glm::packed_highp> matrix) : m(matrix)
+	constexpr Mat4(glm::mat<4, 4, Float, glm::packed_highp> matrix) : m_(matrix)
 	{}
+	// TAKES IN THE ARGUMENTS IN ROW MAJOR FORMAT FOR READABILITY.
 	constexpr Mat4(Float t00, Float t01, Float t02, Float t03,
 		 Float t10, Float t11, Float t12, Float t13,
 		 Float t20, Float t21, Float t22, Float t23,
 		 Float t30, Float t31, Float t32, Float t33)
-		: m(t00, t01, t02, t03,
-			t10, t11, t12, t13,
-			t20, t21, t22, t23,
-			t30, t31, t32, t33)
+		: m_(t00, t10, t20, t30,
+			t01, t11, t21, t31,
+			t02, t12, t22, t32,
+			t03, t13, t23, t33)
 	{};
 
 	// Public methods
 
 	inline Mat4& transpose()
 	{
-		m = glm::transpose(m);
+		m_ = glm::transpose(m_);
+		return *this;
 	}
 	[[nodiscard]] constexpr Mat4 get_transpose() const
 	{
-		return glm::transpose(m);
+		return glm::transpose(m_);
 	};
 
 	[[nodiscard]] constexpr Mat4 get_inverse() const
 	{
-		return glm::inverse(m);
+		return glm::inverse(m_);
 	};
 
 	// Operators
 
+	template<typename T>
+	struct rowStruct
+	{
+	private:
+		std::array<T* const, 4> v;
+
+	public:
+		constexpr rowStruct(std::conditional_t<std::is_const_v<T>, const matType, matType>& m, matType::length_type index)
+			: v({ &m[0][index], &m[1][index], &m[2][index], &m[3][index] }),
+			x(m[0][index]),
+			y(m[1][index]),
+			z(m[2][index]),
+			w(m[3][index])
+		{}
+
+		T& x;
+		T& y;
+		T& z;
+		T& w;
+
+		constexpr const T& operator[](matType::row_type::length_type index) const
+		{
+			return *v[index];
+		}
+		constexpr T& operator[](matType::row_type::length_type index)
+		{
+			return *v[index];
+		}
+
+		constexpr operator glm::vec4() const
+		{
+			return {x, y, z, w};
+		}
+
+		constexpr rowStruct<T>& operator=(const glm::vec4& v)
+		{
+			x = v.x;
+			y = v.y;
+			z = v.z;
+			w = v.w;
+
+			return *this;
+		}
+	};
+	typedef rowStruct<Float> row_ret_t;
+	typedef const rowStruct<const Float> row_ret_c_t;
+
+
+	constexpr glm::vec4 operator[](matType::length_type index) const
+	{
+		return row_ret_c_t(m_, index);
+	}
+	constexpr row_ret_t operator[](matType::length_type index)
+	{
+		return row_ret_t(m_, index);
+	}
+
+
 	[[nodiscard]] inline bool operator==(const Mat4& rhs) const
 	{
-		return m == rhs.m;
+		return m_ == rhs.m_;
 	}
 	[[nodiscard]] inline bool operator!=(const Mat4& rhs) const
 	{
-		return m != rhs.m;
+		return m_ != rhs.m_;
 	}
 
 	[[nodiscard]] constexpr Mat4 operator*(const Mat4& rhs) const
 	{
-		Mat4 r;
-	
-		for (size_t i = 0; i < 4; i++)
-			for (int j = 0; j < 4; j++)
-				r.m[i][j] = 
-					m[i][0] * rhs.m[0][j] +
-					m[i][1] * rhs.m[1][j] +
-					m[i][2] * rhs.m[2][j] +
-					m[i][3] * rhs.m[3][j];
-	
-		return r;
+		return m_ * rhs.m_;
 	}
 	constexpr Mat4& operator*=(const Mat4& rhs)
 	{
