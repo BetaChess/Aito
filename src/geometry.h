@@ -672,8 +672,41 @@ public:
 		return Transform(m.get_inverse(), m);
 	}
 
+	// Friends
+	friend class AnimatedTransform;
+};
+
+class AnimatedTransform
+{
+private:
+	const Transform* const start_transform_;
+	const Transform* const end_transform_;
+
+	const Float start_time_, end_time_;
+	const bool animated_;
+	
+	std::array<Vec3f, 2> T_;
+	std::array<Quaternion, 2> R_;
+	std::array<Mat4, 2> S_;
+	
+	bool has_rotation_;
+
+public:
+	
+	AnimatedTransform(const Transform* start_transform, const Transform* end_transform, Float start_time, Float end_time);
+
+
+	// Public methods
+
+	Transform interpolate(Float t) const;
+	
+	
+	// Public static methods
+	
+	static void decompose(const Mat4& m, Vec3f& T_out, Quaternion& R_out, Mat4& S_out);
 
 };
+
 
 }
 

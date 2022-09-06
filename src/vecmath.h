@@ -244,7 +244,7 @@ public:
 		Float L = length();
 		return *this / L;
 	}
-	[[nodiscard]] constexpr Vec3<T>& normalize()
+	constexpr Vec3<T>& normalize()
 	{
 		Float L = length();
 		*this /= L;
@@ -328,11 +328,11 @@ public:
 	friend class Point3;
 
 	template<typename T>
-	[[nodiscard]] friend constexpr Vec3<T> abs(const Vec3<T>& v);
+	friend constexpr Vec3<T> abs(const Vec3<T>& v);
 	template<typename T>
-	[[nodiscard]] friend constexpr T dot(const Vec3<T>& v, const Vec3<T>& w);
+	friend constexpr T dot(const Vec3<T>& v, const Vec3<T>& w);
 	template<typename T>
-	[[nodiscard]] friend constexpr Vec3<T> cross(const Vec3<T>& v, const Vec3<T>& w);
+	friend constexpr Vec3<T> cross(const Vec3<T>& v, const Vec3<T>& w);
 };
 
 
@@ -1029,6 +1029,11 @@ public:
 
 	// Public methods
 
+	const matType& glm_matrix() const
+	{
+		return m_;
+	}
+
 	inline Mat4& transpose()
 	{
 		m_ = glm::transpose(m_);
@@ -1050,11 +1055,11 @@ public:
 	struct rowStruct
 	{
 	private:
-		std::array<T* const, 4> v;
+		T* v_start_;
 
 	public:
 		constexpr rowStruct(std::conditional_t<std::is_const_v<T>, const matType, matType>& m, matType::length_type index)
-			: v({ &m[0][index], &m[1][index], &m[2][index], &m[3][index] }),
+			: v_start_(&m[0][index]),
 			x(m[0][index]),
 			y(m[1][index]),
 			z(m[2][index]),
@@ -1068,11 +1073,11 @@ public:
 
 		constexpr const T& operator[](matType::row_type::length_type index) const
 		{
-			return *v[index];
+			return v_start_[index * 4];
 		}
 		constexpr T& operator[](matType::row_type::length_type index)
 		{
-			return *v[index];
+			return v_start_[index * 4];
 		}
 
 		constexpr operator glm::vec4() const
@@ -1193,6 +1198,8 @@ public:
 		ry_d = d + (ry_d - d) * s;
 	}
 };
+
+typedef glm::qua<aito::Float, glm::packed_highp> Quaternion;
 
 }
 
