@@ -691,6 +691,23 @@ private:
 	
 	bool has_rotation_;
 
+	struct DerivativeTerm
+	{
+		Float kc, kx, ky, kz;
+
+		DerivativeTerm() = default;
+		DerivativeTerm(Float c, Float x, Float y, Float z)
+			: kc(c), kx(x), ky(y), kz(z)
+		{}
+
+		Float eval(const Point3f& p) const
+		{
+			return kc + kx * p.x + ky * p.y + kz * p.z;
+		}
+	};
+
+	std::array<DerivativeTerm, 3> c1_, c2_, c3_, c4_, c5_;
+
 public:
 	
 	AnimatedTransform(const Transform* start_transform, const Transform* end_transform, Float start_time, Float end_time);
@@ -699,14 +716,15 @@ public:
 	// Public methods
 
 	Transform interpolate(Float t) const;
-	
+
+	Bounds3f motion_bounds(const Bounds3f& b) const;
+	Bounds3f bound_point_motion(const Point3f& p) const;
 	
 	// Public static methods
 	
 	static void decompose(const Mat4& m, Vec3f& T_out, Quaternion& R_out, Mat4& S_out);
 
 };
-
 
 }
 
