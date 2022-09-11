@@ -10,7 +10,7 @@ set(SOURCES
     "geometry.cpp"
     "logger.h"
     "logger.cpp"
-)
+ "interaction.h" "medium.h" "interaction.cpp" "shape.h" "shape.cpp")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 

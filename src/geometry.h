@@ -2,6 +2,8 @@
 #define GEOMETRY_H
 
 #include "vecmath.h"
+#include "interaction.h"
+
 #include<glm/gtc/quaternion.hpp>
 
 #include <iterator>
@@ -28,7 +30,8 @@ public:
 	}
 	constexpr Bounds2(const Point2<T>& p) : p_min(p), p_max(p) {}
 	constexpr Bounds2(const Point2<T>& p1, const Point2<T>& p2)
-		: p_min(min(p1, p2)), p_max(max(p1, p2)) {}
+		: p_min(min(p1, p2)), p_max(max(p1, p2))
+	{}
 
 	// Operators
 
@@ -46,7 +49,7 @@ public:
 	}
 
 	// Public Methods
-	
+
 	[[nodiscard]] constexpr Point2<T> corner(size_t i) const
 	{
 		return Point2<T>(
@@ -93,7 +96,7 @@ public:
 		*center_out = (p_min + p_max) / 2;
 		*radius_out = inside_bounds(*center_out, *this) ? distance(*center_out, p_max) : 0;
 	}
-	
+
 };
 
 template<typename T>
@@ -230,7 +233,7 @@ public:
 			return 0;
 		else if (d.y > d.z)
 			return 1;
-		else 
+		else
 			return 2;
 	}
 
@@ -436,7 +439,7 @@ public:
 	{
 		Float det =
 			m_[0][0] * (m_[1][1] * m_[2][2] - m_[1][2] * m_[2][1]) -
-			m_[0][1] * (m_[1][0] * m_[2][2] - m_[1][2] * m_[2][0]) + 
+			m_[0][1] * (m_[1][0] * m_[2][2] - m_[1][2] * m_[2][0]) +
 			m_[0][2] * (m_[1][0] * m_[2][1] - m_[1][1] * m_[2][0]);
 		return det < 0;
 	}
@@ -504,22 +507,57 @@ public:
 	}
 	[[nodiscard]] constexpr Ray operator()(const Ray& r) const
 	{
-		Vec3f oError;
-		Point3f o = (*this)(r.o, &oError);
+		Vec3f oError_out;
+		Point3f o = (*this)(r.o, oError_out);
 		Vec3f d = (*this)(r.d);
 		// Offset ray origin to edge of error bounds and compute _tMax_
 		Float lengthSquared = d.length_squared();
 		Float t_max = r.t_max;
 		if (lengthSquared > 0)
 		{
-			Float dt = dot(abs(d), oError) / lengthSquared;
+			Float dt = dot(abs(d), oError_out) / lengthSquared;
 			o += d * dt;
 			t_max -= dt;
 		}
 		return Ray(o, d, t_max, r.time, r.medium);
 	}
+	[[nodiscard]] inline SurfaceInteraction operator()(const SurfaceInteraction& si) const
+	{
+		SurfaceInteraction ret;
+		// Transform _p_ and _pError_ in _SurfaceInteraction_
+		ret.p = (*this)(si.p, si.p_error, ret.p_error);
+
+		// Transform remaining members of _SurfaceInteraction_
+		const Transform& t = *this;
+		ret.n = (t(si.n)).normalized();
+		ret.wo = (t(si.wo)).normalized();
+		ret.time = si.time;
+		ret.medium_interface = si.medium_interface;
+		ret.uv = si.uv;
+		ret.shape = si.shape;
+		ret.dpdu = t(si.dpdu);
+		ret.dpdv = t(si.dpdv);
+		ret.dndu = t(si.dndu);
+		ret.dndv = t(si.dndv);
+		ret.shading.n = (t(si.shading.n)).normalized();
+		ret.shading.dpdu = t(si.shading.dpdu);
+		ret.shading.dpdv = t(si.shading.dpdv);
+		ret.shading.dndu = t(si.shading.dndu);
+		ret.shading.dndv = t(si.shading.dndv);
+		ret.dudx = si.dudx;
+		ret.dvdx = si.dvdx;
+		ret.dudy = si.dudy;
+		ret.dvdy = si.dvdy;
+		ret.dpdx = t(si.dpdx);
+		ret.dpdy = t(si.dpdy);
+		ret.bsdf = si.bsdf;
+		ret.bssrdf = si.bssrdf;
+		ret.primitive = si.primitive;
+		ret.shading.n = face_forward(ret.shading.n, static_cast<Vec3f>(ret.n));
+		return ret;
+	};
 	template <typename T>
-	[[nodiscard]] constexpr Point3<T> operator()(const Point3<T>& p, Vec3<T>* pError) const
+	[[nodiscard]] constexpr Point3<T> operator()(const Point3<T>& p, Vec3<T>& pError_out) const
 	{
 		// Compute transformed coordinates from point _pt_
 		T xp = (m_[0][0] * p.x + m_[0][1] * p.y) + (m_[0][2] * p.z + m_[0][3]);
@@ -534,13 +572,123 @@ public:
 					 std::abs(m_[1][2] * p.z) + std::abs(m_[1][3]));
 		T zAbsSum = (std::abs(m_[2][0] * p.x) + std::abs(m_[2][1] * p.y) +
 					 std::abs(m_[2][2] * p.z) + std::abs(m_[2][3]));
-		*pError = gamma(3) * Vec3<T>(xAbsSum, yAbsSum, zAbsSum);
-		
+		pError_out = gamma(3) * Vec3<T>(xAbsSum, yAbsSum, zAbsSum);
+
 		if (wp == 1)
 			return Point3<T>(xp, yp, zp);
 		else
 			return Point3<T>(xp, yp, zp) / wp;
 	}
+	template <typename T>
+	[[nodiscard]] constexpr Point3<T> operator()(const Point3<T>& pt,
+												 const Vec3<T>& ptError,
+												 Vec3<T>& absError_out) const
+	{
+		T x = pt.x, y = pt.y, z = pt.z;
+		T xp = (m_[0][0] * x + m_[0][1] * y) + (m_[0][2] * z + m_[0][3]);
+		T yp = (m_[1][0] * x + m_[1][1] * y) + (m_[1][2] * z + m_[1][3]);
+		T zp = (m_[2][0] * x + m_[2][1] * y) + (m_[2][2] * z + m_[2][3]);
+		T wp = (m_[3][0] * x + m_[3][1] * y) + (m_[3][2] * z + m_[3][3]);
+		absError_out.x =
+			(gamma(3) + (T)1) *
+			(std::abs(m_[0][0]) * ptError.x + std::abs(m_[0][1]) * ptError.y +
+			 std::abs(m_[0][2]) * ptError.z) +
+			gamma(3) * (std::abs(m_[0][0] * x) + std::abs(m_[0][1] * y) +
+						std::abs(m_[0][2] * z) + std::abs(m_[0][3]));
+		absError_out.y =
+			(gamma(3) + (T)1) *
+			(std::abs(m_[1][0]) * ptError.x + std::abs(m_[1][1]) * ptError.y +
+			 std::abs(m_[1][2]) * ptError.z) +
+			gamma(3) * (std::abs(m_[1][0] * x) + std::abs(m_[1][1] * y) +
+						std::abs(m_[1][2] * z) + std::abs(m_[1][3]));
+		absError_out.z =
+			(gamma(3) + (T)1) *
+			(std::abs(m_[2][0]) * ptError.x + std::abs(m_[2][1]) * ptError.y +
+			 std::abs(m_[2][2]) * ptError.z) +
+			gamma(3) * (std::abs(m_[2][0] * x) + std::abs(m_[2][1] * y) +
+						std::abs(m_[2][2] * z) + std::abs(m_[2][3]));
+
+		if (wp == 1.)
+			return Point3<T>(xp, yp, zp);
+		else
+			return Point3<T>(xp, yp, zp) / wp;
+	}
+	template <typename T>
+	[[nodiscard]] constexpr Vec3<T> operator()(const Vec3<T>& v,
+											   Vec3<T>& absError_out) const
+	{
+		T x = v.x, y = v.y, z = v.z;
+		absError_out.x =
+			gamma(3) * (std::abs(m_[0][0] * v.x) + std::abs(m_[0][1] * v.y) +
+						std::abs(m_[0][2] * v.z));
+		absError_out.y =
+			gamma(3) * (std::abs(m_[1][0] * v.x) + std::abs(m_[1][1] * v.y) +
+						std::abs(m_[1][2] * v.z));
+		absError_out.z =
+			gamma(3) * (std::abs(m_[2][0] * v.x) + std::abs(m_[2][1] * v.y) +
+						std::abs(m_[2][2] * v.z));
+		return Vec3<T>(m_[0][0] * x + m_[0][1] * y + m_[0][2] * z,
+					   m_[1][0] * x + m_[1][1] * y + m_[1][2] * z,
+					   m_[2][0] * x + m_[2][1] * y + m_[2][2] * z);
+	}
+	template <typename T>
+	[[nodiscard]] constexpr Vec3<T> operator()(const Vec3<T>& v,
+											   const Vec3<T>& vError,
+											   Vec3<T>& absError_out) const
+	{
+		T x = v.x, y = v.y, z = v.z;
+		absError_out.x =
+			(gamma(3) + (T)1) *
+			(std::abs(m_[0][0]) * vError.x + std::abs(m_[0][1]) * vError.y +
+			 std::abs(m_[0][2]) * vError.z) +
+			gamma(3) * (std::abs(m_[0][0] * v.x) + std::abs(m_[0][1] * v.y) +
+						std::abs(m_[0][2] * v.z));
+		absError_out.y =
+			(gamma(3) + (T)1) *
+			(std::abs(m_[1][0]) * vError.x + std::abs(m_[1][1]) * vError.y +
+			 std::abs(m_[1][2]) * vError.z) +
+			gamma(3) * (std::abs(m_[1][0] * v.x) + std::abs(m_[1][1] * v.y) +
+						std::abs(m_[1][2] * v.z));
+		absError_out.z =
+			(gamma(3) + (T)1) *
+			(std::abs(m_[2][0]) * vError.x + std::abs(m_[2][1]) * vError.y +
+			 std::abs(m_[2][2]) * vError.z) +
+			gamma(3) * (std::abs(m_[2][0] * v.x) + std::abs(m_[2][1] * v.y) +
+						std::abs(m_[2][2] * v.z));
+		return Vec3<T>(m_[0][0] * x + m_[0][1] * y + m_[0][2] * z,
+					   m_[1][0] * x + m_[1][1] * y + m_[1][2] * z,
+					   m_[2][0] * x + m_[2][1] * y + m_[2][2] * z);
+	}
+	[[nodiscard]] constexpr Ray operator()(const Ray& r, Vec3f& oError_out,
+										   Vec3f& dError_out) const
+	{
+		Point3f o = (*this)(r.o, oError_out);
+		Vec3f d = (*this)(r.d, dError_out);
+		Float tMax = r.t_max;
+		Float lengthSquared = d.length_squared();
+		if (lengthSquared > 0)
+		{
+			Float dt = dot(abs(d), oError_out) / lengthSquared;
+			o += d * dt;
+		}
+		return Ray(o, d, tMax, r.time, r.medium);
+	}
+	[[nodiscard]] constexpr Ray operator()(const Ray& r, const Vec3f& oErrorIn,
+										   const Vec3f& dErrorIn, Vec3f& oError_out,
+										   Vec3f& dError_out) const
+	{
+		Point3f o = (*this)(r.o, oErrorIn, oError_out);
+		Vec3f d = (*this)(r.d, dErrorIn, dError_out);
+		Float tMax = r.t_max;
+		Float lengthSquared = d.length_squared();
+		if (lengthSquared > 0)
+		{
+			Float dt = dot(abs(d), oError_out) / lengthSquared;
+			o += d * dt;
+		}
+		return Ray(o, d, tMax, r.time, r.medium);
+	}
+
 
 	[[nodiscard]] constexpr Transform operator*(const Transform& t2) const
 	{
@@ -573,10 +721,10 @@ public:
 			0, 0, z, 0,
 			0, 0, 0, 1);
 		Mat4 m_inv(
-			1/x,  0,   0, 0,
-			0,  1/y,   0, 0,
-			0,    0, 1/z, 0,
-			0,    0,   0, 1);
+			1 / x, 0, 0, 0,
+			0, 1 / y, 0, 0,
+			0, 0, 1 / z, 0,
+			0, 0, 0, 1);
 		return Transform(m, m_inv);
 	}
 	[[nodiscard]] static inline Transform make_rotatex(Float theta)
@@ -667,7 +815,7 @@ public:
 		m[0][2] = dir.x;
 		m[1][2] = dir.y;
 		m[2][2] = dir.z;
-		m[3][2] = 0; 
+		m[3][2] = 0;
 
 		return Transform(m.get_inverse(), m);
 	}
@@ -684,11 +832,11 @@ private:
 
 	const Float start_time_, end_time_;
 	const bool animated_;
-	
+
 	std::array<Vec3f, 2> T_;
 	std::array<Quaternion, 2> R_;
 	std::array<Mat4, 2> S_;
-	
+
 	bool has_rotation_;
 
 	struct DerivativeTerm
@@ -709,7 +857,7 @@ private:
 	std::array<DerivativeTerm, 3> c1_, c2_, c3_, c4_, c5_;
 
 public:
-	
+
 	AnimatedTransform(const Transform* start_transform, const Transform* end_transform, Float start_time, Float end_time);
 
 
@@ -719,9 +867,9 @@ public:
 
 	Bounds3f motion_bounds(const Bounds3f& b) const;
 	Bounds3f bound_point_motion(const Point3f& p) const;
-	
+
 	// Public static methods
-	
+
 	static void decompose(const Mat4& m, Vec3f& T_out, Quaternion& R_out, Mat4& S_out);
 
 };

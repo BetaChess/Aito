@@ -891,6 +891,12 @@ public:
 
 	// Operators
 
+	constexpr Normal3<T>& operator=(const Normal3<T>& n)
+	{
+		v_ = n.v_;
+		return *this;
+	};
+
 	[[nodiscard]] constexpr T operator[](size_t i) const
 	{
 		assert(i >= 0 && i <= 2 && "Out of bounds vector access!");
@@ -902,6 +908,17 @@ public:
 		assert(i >= 0 && i <= 2 && "Out of bounds vector access!");
 
 		return v_[i];
+	}
+
+	// Logical
+
+	[[nodiscard]] constexpr bool operator==(const Normal3<T>& rhs) const
+	{
+		return v_ == rhs.v_;
+	}
+	[[nodiscard]] constexpr bool operator!=(const Normal3<T>& rhs) const
+	{
+		return v_ != rhs.v_;
 	}
 
 	// Arithmetic operators
@@ -966,7 +983,7 @@ constexpr Vec3<T>::Vec3(const Normal3<T>& n) : v_(n.x, n.y, n.z)
 template<typename T>
 [[nodiscard]] constexpr Normal3<T> face_forward(const Normal3<T>& n, const Vec3<T>& v)
 {
-	return (dot(v, n) < static_cast<T>(0)) ? -n : n;
+	return (dot(Normal3<T>(v), n) < static_cast<T>(0)) ? -n : n;
 }
 
 template<typename T>
